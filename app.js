@@ -19,54 +19,54 @@ app.use((req, res, next) => {
   const pathSegments = req.path.split("/").filter(Boolean);
   const targetDomain = pathSegments[0];
 
-  if (!targetDomain || !targetDomain.includes(".")) {
-    console.log("Skip proxy 2");
-    return next();
-  }
+  // if (!targetDomain || !targetDomain.includes(".")) {
+  //   console.log("Skip proxy 2");
+  //   return next();
+  // }
 
-  try {
-    const targetUrl = `https://${targetDomain}`;
+  // try {
+  //   const targetUrl = `https://${targetDomain}`;
 
-    // Create and apply proxy middleware
-    const proxyMiddleware = createProxyMiddleware({
-      target: targetUrl,
-      changeOrigin: true,
-      pathFilter: "/proxy",
-      pathRewrite: (path) => path.replace(/^\/[^\/]+\//, "/"),
-      on: {
-        proxyReq: (proxyReq, req, res) => {
-          console.log("Magic here", req.path);
-          proxyReq.setHeader("Origin", ALLOWED_ORIGIN);
-          proxyReq.setHeader("Referer", ALLOWED_ORIGIN);
-          proxyReq.removeHeader("sec-fetch-site");
-          proxyReq.removeHeader("sec-fetch-mode");
-          console.log(req.headers);
-        },
-        proxyRes: (proxyRes, req, res) => {
-          console.log("Proxy response");
+  //   // Create and apply proxy middleware
+  //   const proxyMiddleware = createProxyMiddleware({
+  //     target: targetUrl,
+  //     changeOrigin: true,
+  //     pathFilter: "/proxy",
+  //     pathRewrite: (path) => path.replace(/^\/[^\/]+\//, "/"),
+  //     on: {
+  //       proxyReq: (proxyReq, req, res) => {
+  //         console.log("Magic here", req.path);
+  //         proxyReq.setHeader("Origin", ALLOWED_ORIGIN);
+  //         proxyReq.setHeader("Referer", ALLOWED_ORIGIN);
+  //         proxyReq.removeHeader("sec-fetch-site");
+  //         proxyReq.removeHeader("sec-fetch-mode");
+  //         console.log(req.headers);
+  //       },
+  //       proxyRes: (proxyRes, req, res) => {
+  //         console.log("Proxy response");
 
-          /* handle proxyRes */
-        },
-        error: (err, req, res) => {
-          console.error("Proxy error:", err);
-          res.writeHead(500, {
-            "Content-Type": "text/plain",
-          });
-        },
-      },
-      secure: false,
-      logLevel: "debug",
-    });
+  //         /* handle proxyRes */
+  //       },
+  //       error: (err, req, res) => {
+  //         console.error("Proxy error:", err);
+  //         res.writeHead(500, {
+  //           "Content-Type": "text/plain",
+  //         });
+  //       },
+  //     },
+  //     secure: false,
+  //     logLevel: "debug",
+  //   });
 
-    // Set origin headers on the request object
-    req.headers.origin = ALLOWED_ORIGIN;
-    req.headers.referer = ALLOWED_ORIGIN;
+  //   // Set origin headers on the request object
+  //   req.headers.origin = ALLOWED_ORIGIN;
+  //   req.headers.referer = ALLOWED_ORIGIN;
 
-    return proxyMiddleware(req, res, next);
-  } catch (err) {
-    console.error("Error creating proxy:", err);
-    return res.status(400).send("Invalid target URL");
-  }
+  //   return proxyMiddleware(req, res, next);
+  // } catch (err) {
+  //   console.error("Error creating proxy:", err);
+  //   return res.status(400).send("Invalid target URL");
+  // }
 });
 
 app.get("*", (req, res) => {
