@@ -3,6 +3,7 @@ const axios = require("axios");
 const bodyParser = require("body-parser");
 const { createProxyMiddleware } = require("http-proxy-middleware");
 const path = require("path");
+require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,14 +15,16 @@ app.use(express.static(path.join(__dirname, "parsed-site")));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+const customRequests = ["pulse.walletconnect.org"];
+function isCustomRequest(reqUrl) {}
+
 // Proxy endpoint
 app.all("/proxy/*", async (req, res) => {
   try {
     // Extract the target URL from the path
     const targetPath = req.url.replace("/proxy/", "");
-    const targetUrl = targetPath.startsWith("http")
-      ? targetPath
-      : `https://${targetPath}`;
+    const targetUrl = `https://${targetPath}`;
+    let requestOptions;
 
     // Create clean headers that won't trigger Cloudflare
     const cleanHeaders = {
@@ -33,13 +36,21 @@ app.all("/proxy/*", async (req, res) => {
       Referer: `https://${ALLOWED_ORIGIN}/`,
     };
 
-    // Add cookies if needed (helps with Cloudflare)
-    const cookieJar = axios.create({
+    // Add cookies
+    const axiosInstance = axios.create({
       withCredentials: true,
     });
 
-    // Configure the request options
-    const requestOptions = {
+    // Log request before sending
+    axiosInstance.interceptors.request.use((config) => {
+      console.log("******* AXIOS REQUEST: ********");
+      console.log("URL:", config.url);
+      console.log("Method:", config.method?.toUpperCase());
+      console.log("Headers:", config.headers);
+      return config;
+    });
+
+    requestOptions = {
       method: req.method,
       url: targetUrl,
       headers: cleanHeaders,
@@ -47,7 +58,7 @@ app.all("/proxy/*", async (req, res) => {
         rejectUnauthorized: false,
       }),
       maxRedirects: 5,
-      validateStatus: (status) => status < 500, // Accept all responses < 500
+      validateStatus: (status) => status < 500,
     };
 
     // Add data/params based on request method
@@ -58,7 +69,7 @@ app.all("/proxy/*", async (req, res) => {
     }
 
     // Forward the request using Axios
-    const response = await cookieJar(requestOptions);
+    const response = await axiosInstance(requestOptions);
 
     // Send the response back to the client
     res.status(response.status).send(response.data);
