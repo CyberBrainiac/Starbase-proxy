@@ -4,8 +4,8 @@ fetch(
     headers: {
       accept: "*/*",
       "accept-language": "en,uk;q=0.9,ru;q=0.8,en-US;q=0.7",
-      "cache-control": "no-cache",
       "content-type": "text/plain;charset=UTF-8",
+      "cache-control": "no-cache",
       pragma: "no-cache",
       priority: "u=1, i",
       "sec-ch-ua":
@@ -24,6 +24,22 @@ fetch(
     credentials: "omit",
   }
 );
+
+  url: 'https://pulse.walletconnect.org/batch?projectId=7c81709b1adb6c04139ec72e5e56175e&st=events_sdk&sv=js-2.17.0',
+  headers: {
+    accept: '*/*',
+    'accept-language': 'en,uk;q=0.9,ru;q=0.8,en-US;q=0.7',
+    'content-type': 'text/plain;charset=UTF-8',
+    priority: 'u=1, i',
+    'sec-ch-ua': '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'cross-site',
+    origin: 'https://app.sky.money',
+    referer: 'https://app.sky.money/'
+  },
 
 //my request on Windows 10:
 fetch(
