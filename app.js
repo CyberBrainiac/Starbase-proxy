@@ -5,7 +5,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import url from "./utils/url.js";
-import constructWalletRequest from "./lib/constructWalletRequest.js";
+import choseHandler from "./lib/constructWalletRequest.js";
 
 // Setup __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -43,7 +43,7 @@ app.all("/proxy/*", async (req, res) => {
     };
 
     if (url.isCustom(targetUrl)) {
-      requestOptions = await constructWalletRequest(req);
+      requestOptions = await choseHandler(req);
       console.log("Custom request options", requestOptions);
     } else {
       requestOptions = {
