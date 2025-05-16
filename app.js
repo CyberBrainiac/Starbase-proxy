@@ -5,7 +5,8 @@ import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import url from "./utils/url.js";
-import choseHandler from "./lib/constructWalletRequest.js";
+import choseHandler from "./lib/constructCustomRequest.js";
+import { fetchIpData } from "./lib/usePuppeteer.js";
 
 // Setup __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -24,68 +25,68 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.text());
 app.use(express.json());
 
-// Proxy endpoint
+let requestOptions;
+let targetPath;
+let targetUrl;
+
+const cleanHeaders = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+  Accept: "application/json, text/plain, */*",
+  "Accept-Language": "en-US,en;q=0.9",
+  Origin: `https://${ALLOWED_ORIGIN}/`,
+  Referer: `https://${ALLOWED_ORIGIN}/`,
+};
+
 app.all("/proxy/*", async (req, res) => {
   try {
-    // Extract the target URL from the path
-    const targetPath = req.url.replace("/proxy/", "");
-    const targetUrl = `https://${targetPath}`;
-    let requestOptions;
+    targetPath = req.url.replace("/proxy/", "");
+    targetUrl = `https://${targetPath}`;
 
-    // Create clean headers that won't trigger Cloudflare
-    const cleanHeaders = {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-      Accept: "application/json, text/plain, */*",
-      "Accept-Language": "en-US,en;q=0.9",
-      Origin: `https://${ALLOWED_ORIGIN}/`,
-      Referer: `https://${ALLOWED_ORIGIN}/`,
+    requestOptions = {
+      method: req.method,
+      url: targetUrl,
+      headers: cleanHeaders,
     };
-
-    if (url.isCustom(targetUrl)) {
-      requestOptions = await choseHandler(req);
-      console.log("Custom request options", requestOptions);
-    } else {
-      requestOptions = {
-        method: req.method,
-        url: targetUrl,
-        headers: cleanHeaders,
-        httpsAgent: new (await import("https")).Agent({
-          rejectUnauthorized: false,
-        }),
-        maxRedirects: 5,
-        validateStatus: (status) => status < 500,
-      };
-    }
 
     // Add cookies
     const axiosInstance = axios.create({
       withCredentials: true,
     });
 
-    // Log request before sending
     axiosInstance.interceptors.request.use((config) => {
-      // console.log("******* AXIOS REQUEST: ********");
-      // console.log("URL:", config.url);
-      // console.log("Method:", config.method?.toUpperCase());
-      // console.log("Headers:", config.headers);
-      // console.log("Body:", config.data);
+      console.log("******* AXIOS REQUEST: ********");
+      console.log("URL:", config.url);
+      console.log("Method:", config.method?.toUpperCase());
+      console.log("Headers:", config.headers);
+      console.log("Body:", config.data);
       return config;
     });
 
-    // Add data/params based on request method
     if (["POST", "PUT", "PATCH"].includes(req.method)) {
       requestOptions.data = req.body;
     } else if (req.method === "GET" && Object.keys(req.query).length) {
       requestOptions.params = req.query;
     }
 
-    // Forward the request using Axios
     const response = await axiosInstance(requestOptions);
-
-    // Send the response back to the client
     res.status(response.status).send(response.data);
   } catch (error) {
+    // If a Cloudflare challenge or 403 status try Puppeteer
+    if (
+      error.response?.status === 403 ||
+      (error.response?.data &&
+        typeof error.response.data === "string" &&
+        (error.response.data.includes("cf-browser-verification") ||
+          error.response.data.includes("cloudflare")))
+    ) {
+      console.log("Detected Cloudflare challenge, attempting bypass...");
+      const result = await fetchIpData(targetUrl);
+      res.status(result.status).send(result.data);
+    } else {
+      throw error;
+    }
+
     console.error("Proxy error:", error.message);
     const status = error.response?.status || 500;
     const errorData = error.response?.data || {
