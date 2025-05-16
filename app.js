@@ -4,8 +4,6 @@ import bodyParser from "body-parser";
 import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
-import url from "./utils/url.js";
-import choseHandler from "./lib/constructCustomRequest.js";
 import { fetchIpData } from "./lib/usePuppeteer.js";
 
 // Setup __dirname equivalent in ES modules
@@ -82,12 +80,12 @@ app.all("/proxy/*", async (req, res) => {
     ) {
       console.log("Detected Cloudflare challenge, attempting bypass...");
       const result = await fetchIpData(targetUrl);
-      res.status(result.status).send(result.data);
-    } else {
-      throw error;
+      console.log("RESULT", result);
+      //then return to result to frontend but i cant resolve Cloudflare challenge :(
     }
 
-    console.error("Proxy error:", error.message);
+    //Other errors handler
+    console.error("Proxy Server error:", error.message);
     const status = error.response?.status || 500;
     const errorData = error.response?.data || {
       message: "Internal Server Error",
